@@ -21,6 +21,7 @@ import com.serotonin.InvalidArgumentException;
 import com.serotonin.ShouldNeverHappenException;
 import com.serotonin.mango.Common;
 import org.scada_lts.utils.ColorUtils;
+import org.scada_lts.workdomain.event.EventExporter;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -63,9 +64,22 @@ public class SystemSettingsDAO {
 	public static final String EVENT_PURGE_PERIOD_TYPE = "eventPurgePeriodType";
 	public static final String EVENT_PURGE_PERIODS = "eventPurgePeriods";
 
+	// Alarm Export
+	public static final String ALARM_EXPORT_TYPE	= "alarmExportType";
+	public static final String ALARM_EXPORT_HOST 	= "alarmExportHost";
+	public static final String ALARM_EXPORT_PORT 	= "alarmExportPort";
+	public static final String ALARM_EXPORT_VIRTUAL = "alarmExportVirtual";
+	public static final String ALARM_EXPORT_USERNAME = "alarmExportUsername";
+	public static final String ALARM_EXPORT_PASSWORD = "alarmExportPassword";
+	public static final String ALARM_EXPORT_EX_NAME = "alarmExportExchangeName";
+	public static final String ALARM_EXPORT_Q_NAME = "alarmExportQueueName";
+
 	// Report purging
 	public static final String REPORT_PURGE_PERIOD_TYPE = "reportPurgePeriodType";
 	public static final String REPORT_PURGE_PERIODS = "reportPurgePeriods";
+	
+	// DBH [2018-09-12]: Crontab purging
+	public static final String DATA_PURGE_CRON = "dataPurgeCron";
 
 	// HTTP Client configuration
 	public static final String HTTP_CLIENT_USE_PROXY = "httpClientUseProxy";
@@ -291,6 +305,8 @@ public class SystemSettingsDAO {
 
 		DEFAULT_VALUES.put(REPORT_PURGE_PERIOD_TYPE, Common.TimePeriods.MONTHS);
 		DEFAULT_VALUES.put(REPORT_PURGE_PERIODS, 1);
+		// DBH [20180912] : Default value for cron purge data
+		DEFAULT_VALUES.put(DATA_PURGE_CRON, "0 5 3 * * ?");
 
 		DEFAULT_VALUES.put(NEW_VERSION_NOTIFICATION_LEVEL,
 				NOTIFICATION_LEVEL_STABLE);
@@ -310,6 +326,15 @@ public class SystemSettingsDAO {
 		DEFAULT_VALUES.put(CHART_BACKGROUND_COLOUR, "white");
 		DEFAULT_VALUES.put(PLOT_BACKGROUND_COLOUR, "white");
 		DEFAULT_VALUES.put(PLOT_GRIDLINE_COLOUR, "silver");
+
+		DEFAULT_VALUES.put(ALARM_EXPORT_TYPE, EventExporter.DEFAULT);
+		DEFAULT_VALUES.put(ALARM_EXPORT_HOST, "localhost");
+		DEFAULT_VALUES.put(ALARM_EXPORT_PORT, 5672);
+		DEFAULT_VALUES.put(ALARM_EXPORT_VIRTUAL, "/ScadaLTSEvents");
+		DEFAULT_VALUES.put(ALARM_EXPORT_USERNAME, "admin");
+		DEFAULT_VALUES.put(ALARM_EXPORT_PASSWORD, "");
+		DEFAULT_VALUES.put(ALARM_EXPORT_EX_NAME, "ScadaLTS_events");
+		DEFAULT_VALUES.put(ALARM_EXPORT_Q_NAME, "all_logs");
 	}
 
 	@Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED, rollbackFor = SQLException.class)

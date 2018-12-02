@@ -47,9 +47,10 @@ public class DataPurge {
 
     private final RuntimeManager rm = Common.ctx.getRuntimeManager();
 
-    public static void schedule() {
+    // DBH [2018-09-12]: Pass data purge cron time to DataPurgeTask 
+    public static void schedule(String dataPurgeCron) {
         try {
-            Common.timer.schedule(new DataPurgeTask());
+            Common.timer.schedule(new DataPurgeTask(dataPurgeCron));
         }
         catch (ParseException e) {
             throw new ShouldNeverHappenException(e);
@@ -133,6 +134,16 @@ public class DataPurge {
             log.info("Event purge ended, " + deleteCount + " events deleted");
     }
 
+    public void eventPurge(long runtime) {
+        DateTime cutoff = DateUtils.truncateDateTime(new DateTime(runtime), Common.TimePeriods.DAYS);
+        cutoff = DateUtils.minus(cutoff, SystemSettingsDAO.getIntValue(SystemSettingsDAO.EVENT_PURGE_PERIOD_TYPE),
+                SystemSettingsDAO.getIntValue(SystemSettingsDAO.EVENT_PURGE_PERIODS));
+
+        int deleteCount = new EventDao().purgeEventsBefore(cutoff.getMillis());
+        if (deleteCount > 0)
+            log.info("Event purge ended, " + deleteCount + " events deleted");
+    }
+
     private void reportPurge() {
         DateTime cutoff = DateUtils.truncateDateTime(new DateTime(runtime), Common.TimePeriods.DAYS);
         cutoff = DateUtils.minus(cutoff, SystemSettingsDAO.getIntValue(SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE),
@@ -143,12 +154,23 @@ public class DataPurge {
             log.info("Report purge ended, " + deleteCount + " report instances deleted");
     }
 
+    public void reportPurge(long runtime) {
+        DateTime cutoff = DateUtils.truncateDateTime(new DateTime(runtime), Common.TimePeriods.DAYS);
+        cutoff = DateUtils.minus(cutoff, SystemSettingsDAO.getIntValue(SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE),
+                SystemSettingsDAO.getIntValue(SystemSettingsDAO.REPORT_PURGE_PERIODS));
+
+        int deleteCount = new ReportDao().purgeReportsBefore(cutoff.getMillis());
+        if (deleteCount > 0)
+            log.info("Report purge ended, " + deleteCount + " report instances deleted");
+    }
+
     static class DataPurgeTask extends TimerTask {
-        DataPurgeTask() throws ParseException {
+    	//DBH [2018-09-12]: Pass data purge cron time to DataPurgeTask 
+    	DataPurgeTask(String dataPurgeCron) throws ParseException {
             // Test trigger for running every 5 minutes.
             //super(new CronTimerTrigger("0 0/5 * * * ?"));
-            // Trigger to run at 3:05am every day
-            super(new CronTimerTrigger("0 5 3 * * ?"));
+            // Trigger to run at the time defined in system settings
+            super(new CronTimerTrigger(dataPurgeCron));
         }
 
         @Override

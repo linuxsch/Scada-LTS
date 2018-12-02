@@ -30,10 +30,10 @@ Here is two of the several start options:
 * Download Docker Toolbox from: https://kitematic.com/
 * Run Docker and Docker Toolbox.
 * When the download is completed in the Docker Toolbox run Docker CLI (bottom-left corner).
-* In the Docker CLI type in: `docker pull dockergb/scadalts-dev` to download repository.
-* Type in: `docker images` to check if repository is created. It should show "dockergb/scadalts" on the list.
+* In the Docker CLI type in: `docker pull scadalts/scadalts` to download repository.
+* Type in: `docker images` to check if repository is created. It should show "scadalts/scadalts" on the list.
 * To run Scada on Docker type in: 
-``docker run -it -e DOCKER_HOST_IP=`docker-machine ip` -p 81:8080 dockergb/scadalts-dev /root/start.sh``.
+``docker run -it -e DOCKER_HOST_IP=`docker-machine ip` -p 81:8080 scadalts/scadalts /root/start.sh``.
 * Type in: `Get-NetIPAddress` and find IPAdrress for "DockerNAT" InterfaceAlias (You need a new CLI window to do it).
 * Type in docker IP adrress in the browser with port 81 and `/ScadaLTS/` sufix. Example:
 `http://10.0.75.2:81/ScadaLTS/`
@@ -44,16 +44,39 @@ Here is two of the several start options:
 * Install mysql: `apt-get install mysql-server`.
 * Login to mysql: `mysql -u [user] -p`.
 * Create db:`create dababase scadalts;`.
-* Copy ScadaBR.war & ScadaLTS.war to dir tomacat webapps: `cp ScadaBR.war /var/lib/tomcat7/webapps/`.
+* Copy ScadaBR.war to dir tomacat webapps: `cp ScadaBR.war /var/lib/tomcat7/webapps/`.
+    Optionally you can build ScadaBR.war. For this you have instruction how do it in section "Building from sources",which is below.
 * Restart tomcat7 to generate ScadaLTS folder: `/etc/init.d/tomcat7 restart`
 * Change config file env.properties set connection to db: `vim /var/lib/tomcat7/webapps/ScadaBR/WEB-INF/classes/env.properties`.
 * Restart tomcat7: `/etc/init.d/tomcat7 restart`
 
+### Building from sources
 
-### What's included
+1.Please checkout sources from git from master branch by command
+    `git clone https://github.com/SCADA-LTS/Scada-LTS.git`
 
-App ScadaBR.war 
-App ScadaLTS.war
+After that You can open the project on Intellij Community Edition
+
+2.Build project by Ant
+
+Please set up environment variable CATALINA_HOME in your system.
+Example for linux system:
+`CATALINA_HOME='home/yourusername/path_to_tomcat_directory'`
+
+We have build.xml which is used to build scadalts.war file.
+
+Below are ant tasks which we run step by step
+- `ant clean`,
+- `ant build`,
+- `ant war`
+
+3.Deploy
+
+For deploy war file to tomcat we use `ant clean_and_tomcat_deploy` task on Windows and Linux.
+
+4.Running and debugging application
+
+After deploying you can run tomcat by supplying either `ant run-debug` on windows or `ant run-debug-linux` on Linux
 
 ## Bugs and feature requests
 
@@ -75,6 +98,10 @@ In the process of making.
 ## Tests
 
 [scada-lts.testquality.com](https://scada-lts.testquality.com)
+
+## Project Encoding
+
+Default project encoding is set to UTF-8.
 
 
 ## Versioning

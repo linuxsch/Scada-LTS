@@ -17,6 +17,7 @@
     along with this program.  If not, see http://www.gnu.org/licenses/.
 --%>
 <%@page import="org.scada_lts.dao.SystemSettingsDAO"%>
+<%@page import="org.scada_lts.workdomain.event.EventExporter"%>
 <%@page import="com.serotonin.mango.Common"%>
 <%@page import="com.serotonin.mango.rt.event.AlarmLevels"%>
 <%@page import="com.serotonin.mango.rt.event.type.EventType"%>
@@ -69,6 +70,20 @@
                     systemEventAlarmLevels);
             setEventTypeData("auditEventAlarmLevelsList", settings.auditEventTypes, alarmFunctions, alarmOptions,
                     auditEventAlarmLevels);
+
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_HOST %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_HOST %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PORT %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PORT %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_VIRTUAL %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_VIRTUAL %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_USERNAME %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_USERNAME %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PASSWORD %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PASSWORD %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_EX_NAME %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_EX_NAME %>"/>);
+            $set("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_Q_NAME %>"/>", settings.<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_Q_NAME %>"/>);
+            alarmTypeChange();
+            if( "<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>" == 2 ||  "<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>" == 3) {
+                testExportConnection();
+            }
+
             
             $set("<c:out value="<%= SystemSettingsDAO.HTTP_CLIENT_USE_PROXY %>"/>", settings.<c:out value="<%= SystemSettingsDAO.HTTP_CLIENT_USE_PROXY %>"/>);
             $set("<c:out value="<%= SystemSettingsDAO.HTTP_CLIENT_PROXY_SERVER %>"/>", settings.<c:out value="<%= SystemSettingsDAO.HTTP_CLIENT_PROXY_SERVER %>"/>);
@@ -81,11 +96,15 @@
             $set("<c:out value="<%= SystemSettingsDAO.EVENT_PURGE_PERIODS %>"/>", settings.<c:out value="<%= SystemSettingsDAO.EVENT_PURGE_PERIODS %>"/>);
             $set("<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE %>"/>", settings.<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE %>"/>);
             $set("<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIODS %>"/>", settings.<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIODS %>"/>);
+         	           
             $set("<c:out value="<%= SystemSettingsDAO.UI_PERFORMANCE %>"/>", settings.<c:out value="<%= SystemSettingsDAO.UI_PERFORMANCE %>"/>);
 
             $set("<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIOD_TYPE %>"/>", settings.<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIOD_TYPE %>"/>);
             $set("<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIODS %>"/>", settings.<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIODS %>"/>);
             
+         // DBH [2018-09-12]: Init the data purge CRON field with the value stored into the database
+            $set("<c:out value="<%= SystemSettingsDAO.DATA_PURGE_CRON %>"/>", settings.<c:out value="<%= SystemSettingsDAO.DATA_PURGE_CRON %>"/>);
+         
             $set("<c:out value="<%= SystemSettingsDAO.INSTANCE_DESCRIPTION %>"/>", settings.<c:out value="<%= SystemSettingsDAO.INSTANCE_DESCRIPTION %>"/>);
             
             var sel = $("<c:out value="<%= SystemSettingsDAO.LANGUAGE %>"/>");
@@ -217,6 +236,56 @@
         setUserMessage("auditEventAlarmLevelsMessage");
         startImageFader("saveAuditEventAlarmLevelsImg");
     }
+
+    function alarmTypeChange() {
+        var aType = $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>");
+        if (aType == 1) {
+            hide("alarmExportFields");
+        } else {
+            show("alarmExportFields");
+        }
+    }
+
+    function saveAlarmExportSettings() {
+        SystemSettingsDwr.saveAlarmExportSettings(
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_HOST %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PORT %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_VIRTUAL %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_USERNAME %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PASSWORD %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_EX_NAME %>"/>"),
+            $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_Q_NAME %>"/>"),
+            function() {
+                stopImageFader("saveAlarmExportSettingsImg");
+                setUserMessage("saveAlarmExportSettingsMessage", "Saved Export Settings");
+        });
+        setUserMessage("saveAlarmExportSettingsMessage");
+        startImageFader("saveAlarmExportSettingsImg");
+    }
+
+    function testExportConnection() {
+        SystemSettingsDwr.testExportConnection(
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_HOST %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PORT %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_VIRTUAL %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_USERNAME %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PASSWORD %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_EX_NAME %>"/>"),
+                $get("<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_Q_NAME %>"/>"),
+                function(msg) {
+                    var exportConnectionIcon = document.getElementById('testExportSettingsImg');
+                    if (msg == "Connected") {
+                        exportConnectionIcon.src = "images/database_go.png";
+                    } else {
+                        exportConnectionIcon.src = "images/database_stop.png";
+                        alert("<fmt:message key="systemSettings.reServer"/>" + " Event Export Settings - RabbitMQ broker " + msg);
+                    }
+
+            });
+
+    }
     
     function smtpAuthChange() {
         var auth = $("<c:out value="<%= SystemSettingsDAO.EMAIL_AUTHORIZATION %>"/>").checked;
@@ -248,21 +317,27 @@
     }
     
     function saveMiscSettings() {
-        SystemSettingsDwr.saveMiscSettings(
-                $get("<c:out value="<%= SystemSettingsDAO.EVENT_PURGE_PERIOD_TYPE %>"/>"),
-                $get("<c:out value="<%= SystemSettingsDAO.EVENT_PURGE_PERIODS %>"/>"),
-                $get("<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE %>"/>"),
-                $get("<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIODS %>"/>"),
-                $get("<c:out value="<%= SystemSettingsDAO.UI_PERFORMANCE %>"/>"),
-                1,
-                $get("<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIOD_TYPE %>"/>"),
-                $get("<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIODS %>"/>"),
-                function() {
-                    stopImageFader("saveMiscSettingsImg");
-                    setUserMessage("miscMessage", "<fmt:message key="systemSettings.miscSaved"/>");
-                });
-        setUserMessage("miscMessage");
-        startImageFader("saveMiscSettingsImg");
+   		if (checkCronFormat()) {   		
+	        SystemSettingsDwr.saveMiscSettings(
+	                $get("<c:out value="<%= SystemSettingsDAO.EVENT_PURGE_PERIOD_TYPE %>"/>"),
+	                $get("<c:out value="<%= SystemSettingsDAO.EVENT_PURGE_PERIODS %>"/>"),
+	                $get("<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE %>"/>"),
+	                $get("<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIODS %>"/>"),
+	                $get("<c:out value="<%= SystemSettingsDAO.UI_PERFORMANCE %>"/>"),
+	                1,
+	                $get("<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIOD_TYPE %>"/>"),
+	                $get("<c:out value="<%= SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIODS %>"/>"),
+	                $get("<c:out value="<%= SystemSettingsDAO.DATA_PURGE_CRON %>"/>"),
+	                function() {
+	                    stopImageFader("saveMiscSettingsImg");
+	                    setUserMessage("miscMessage", "<fmt:message key="systemSettings.miscSaved"/>");
+	                });
+	        setUserMessage("miscMessage");
+	        startImageFader("saveMiscSettingsImg");
+   		} else {
+   			stopImageFader("saveMiscSettingsImg");
+   			setUserMessage("miscMessage", "<fmt:message key="systemSettings.miscCronFormatError"/>");
+   		}
     }
     
     function setUserMessage(type, msg) {
@@ -295,11 +370,48 @@
     }
     
     function purgeNow() {
-        SystemSettingsDwr.purgeNow(function() {
-            stopImageFader("purgeNowImg");
-            dbSizeUpdate();
-        });
-        startImageFader("purgeNowImg");
+        reportsCount = document.getElementById("reportPurgePeriods").value;
+        reportsType = document.getElementById("reportPurgePeriodType").options[document.getElementById("reportPurgePeriodType").selectedIndex].text;
+        eventsCount = document.getElementById("eventPurgePeriods").value;
+        eventsType = document.getElementById("eventPurgePeriodType").options[document.getElementById("eventPurgePeriodType").selectedIndex].text;
+        confirmMsg = "This will purge: " +
+        "\n-all events before " + eventsCount + " " + eventsType +
+        "\n-all reports before " + reportsCount + " " + reportsType +
+        "\n-all data points values according to point properties" +
+        "\n Are you sure?";
+        if (confirm(confirmMsg)) {
+            SystemSettingsDwr.purgeNow(function() {
+                stopImageFader("purgeNowImg");
+                dbSizeUpdate();
+            });
+            startImageFader("purgeNowImg");
+        }
+    }
+
+    function purgeEvents() {
+        count = document.getElementById("eventPurgePeriods").value;
+        dateTypes = document.getElementById("eventPurgePeriodType");
+        type = dateTypes.options[dateTypes.selectedIndex].text;
+        if (confirm("This will purge all events before " + count + " " + type +". Are you sure?")) {
+            SystemSettingsDwr.purgeEvents(function() {
+                stopImageFader("purgeNowImg");
+                dbSizeUpdate();
+            });
+            startImageFader("purgeNowImg");
+        }
+    }
+
+    function purgeReports() {
+        count = document.getElementById("reportPurgePeriods").value;
+        dateTypes = document.getElementById("reportPurgePeriodType");
+        type = dateTypes.options[dateTypes.selectedIndex].text;
+        if (confirm("This will purge all reports before " + count + " " + type +". Are you sure?")) {
+                SystemSettingsDwr.purgeReports(function() {
+                    stopImageFader("purgeNowImg");
+                    dbSizeUpdate();
+                });
+                startImageFader("purgeNowImg");
+        }
     }
     
     function saveLangSettings() {
@@ -404,6 +516,13 @@
             }
         });
 
+    }
+            
+    function checkCronFormat() {
+    	var cronString = $get("<c:out value="<%= SystemSettingsDAO.DATA_PURGE_CRON %>"/>");
+    	var cronRegEx = RegExp("^\\s*($|#|\\w+\\s*=|(\\?|\\*|(?:[0-5]?\\d)(?:(?:-|\/|\\,)(?:[0-5]?\\d))?(?:,(?:[0-5]?\\d)(?:(?:-|\/|\\,)(?:[0-5]?\\d))?)*)\\s+(\\?|\\*|(?:[0-5]?\\d)(?:(?:-|\/|\\,)(?:[0-5]?\\d))?(?:,(?:[0-5]?\\d)(?:(?:-|\/|\\,)(?:[0-5]?\\d))?)*)\\s+(\\?|\\*|(?:[01]?\\d|2[0-3])(?:(?:-|\/|\\,)(?:[01]?\\d|2[0-3]))?(?:,(?:[01]?\\d|2[0-3])(?:(?:-|\/|\\,)(?:[01]?\\d|2[0-3]))?)*)\\s+(\\?|\\*|(?:0?[1-9]|[12]\\d|3[01])(?:(?:-|\/|\\,)(?:0?[1-9]|[12]\\d|3[01]))?(?:,(?:0?[1-9]|[12]\\d|3[01])(?:(?:-|\/|\\,)(?:0?[1-9]|[12]\\d|3[01]))?)*)\\s+(\\?|\\*|(?:[1-9]|1[012])(?:(?:-|\/|\\,)(?:[1-9]|1[012]))?(?:L|W)?(?:,(?:[1-9]|1[012])(?:(?:-|\/|\\,)(?:[1-9]|1[012]))?(?:L|W)?)*|\\?|\\*|(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(?:(?:-)(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))?(?:,(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(?:(?:-)(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))?)*)\\s+(\\?|\\*|(?:[0-6])(?:(?:-|\/|\\,|#)(?:[0-6]))?(?:L)?(?:,(?:[0-6])(?:(?:-|\/|\\,|#)(?:[0-6]))?(?:L)?)*|\\?|\\*|(?:MON|TUE|WED|THU|FRI|SAT|SUN)(?:(?:-)(?:MON|TUE|WED|THU|FRI|SAT|SUN))?(?:,(?:MON|TUE|WED|THU|FRI|SAT|SUN)(?:(?:-)(?:MON|TUE|WED|THU|FRI|SAT|SUN))?)*)(|\\s)+(\\?|\\*|(?:|\\d{4})(?:(?:-|\/|\\,)(?:|\\d{4}))?(?:,(?:|\\d{4})(?:(?:-|\/|\\,)(?:|\\d{4}))?)*))$");
+    	var isCorrect = cronRegEx.test(cronString);
+    	return isCorrect;
     }
     
     
@@ -519,7 +638,65 @@
       </tr>
     </table>
   </div>
-  
+
+  <div class="borderDiv marB marR" style="float:left">
+    <table width="100%">
+      <tr>
+        <td>
+          <span class="smallTitle"><fmt:message key="systemSettings.eventExport"/></span>
+          <tag:help id="systemEventExport"/>
+        </td>
+        <td align="right">
+          <tag:img id="testExportSettingsImg" png="database_go" onclick="testExportConnection();" title="Test Connection"/>
+          <tag:img id="saveAlarmExportSettingsImg" png="save" onclick="saveAlarmExportSettings();" title="common.save"/>
+        </td>
+        <td colspan="2" id="saveAlarmExportSettingsMessage" class="formError"></td>
+      </tr>
+    </table>
+    <table>
+      <tbody id="alarmExportSettings"></tbody>
+      <tr>
+        <td>
+            <select id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_TYPE %>"/>"  onchange="alarmTypeChange()">
+                <option value="<c:out value="<%= EventExporter.DEFAULT %>"/>"><fmt:message key="systemSettings.eventExport.eType.default"/></option>
+                <option value="<c:out value="<%= EventExporter.RABBIT_MQ %>"/>"><fmt:message key="systemSettings.eventExport.eType.rabbitMq"/></option>
+                <option value="<c:out value="<%= EventExporter.SCADA_AND_RABBBIT %>"/>"><fmt:message key="systemSettings.eventExport.eType.all"/></option>
+            </select>
+        </td>
+      </tr>
+      <tbody id="alarmExportFields" style="display:none;">
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.host"/></td>
+          <td><input type="text" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_HOST %>"/>"></input></td>
+        </tr>
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.port"/></td>
+          <td><input type="number" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PORT %>"/>"></input></td>
+        </tr>
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.virtualHost"/></td>
+          <td><input type="text" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_VIRTUAL %>"/>"></input></td>
+        </tr>
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.username"/></td>
+          <td><input type="text" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_USERNAME %>"/>"></input></td>
+        </tr>
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.password"/></td>
+          <td><input type="password" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_PASSWORD %>"/>"></input></td>
+        </tr>
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.exchangeName"/></td>
+          <td><input type="text" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_EX_NAME %>"/>"></input></td>
+        </tr>
+        <tr>
+          <td><fmt:message key="systemSettings.eventExport.queueName"/></td>
+          <td><input type="text" id="<c:out value="<%= SystemSettingsDAO.ALARM_EXPORT_Q_NAME %>"/>"></input></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
   <div class="borderDiv marB marR" style="float:left">
     <table width="100%">
       <tr>
@@ -689,6 +866,9 @@
             <tag:timePeriodOptions d="true" w="true" mon="true" y="true"/>
           </select>
         </td>
+        <td>
+            <input type="button" value="Purge now" onclick="purgeEvents()"/>
+        </td>
       </tr>
       <tr>
         <td class="formLabelRequired"><fmt:message key="systemSettings.purgeReports"/></td>
@@ -697,6 +877,9 @@
           <select id="<c:out value="<%= SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE %>"/>">
             <tag:timePeriodOptions d="true" w="true" mon="true" y="true"/>
           </select>
+        </td>
+        <td>
+          <input type="button" value="Purge now" onclick="purgeReports()"/>
         </td>
       </tr>
       <tr>
@@ -713,6 +896,13 @@
           </select>
         </td>
       </tr>
+      <tr>
+        <td class="formLabelRequired"><fmt:message key="systemSettings.purgeCron"/></td>
+        <td class="formField">
+          <input id="<c:out value="<%= SystemSettingsDAO.DATA_PURGE_CRON %>"/>" type="text" />
+        </td>
+      </tr>
+      <tr>
       <tr>
         <td colspan="2" id="miscMessage" class="formError"></td>
       </tr>

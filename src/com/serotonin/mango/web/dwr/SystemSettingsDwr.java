@@ -41,6 +41,7 @@ import com.serotonin.web.dwr.MethodFilter;
 import com.serotonin.web.i18n.I18NUtils;
 import com.serotonin.web.i18n.LocalizableMessage;
 import org.scada_lts.utils.ColorUtils;
+import org.scada_lts.workdomain.event.RabbitMqExporter;
 
 import java.io.File;
 import java.net.SocketTimeoutException;
@@ -81,6 +82,24 @@ public class SystemSettingsDwr extends BaseDwr {
 		// System event types
 		settings.put("auditEventTypes", AuditEventType.getAuditEventTypes());
 
+		// Alarm Export
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_TYPE,
+				SystemSettingsDAO.getIntValue(SystemSettingsDAO.ALARM_EXPORT_TYPE, 1));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_HOST,
+				SystemSettingsDAO.getValue(SystemSettingsDAO.ALARM_EXPORT_HOST));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_PORT,
+				SystemSettingsDAO.getIntValue(SystemSettingsDAO.ALARM_EXPORT_PORT, 5672));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_VIRTUAL,
+				SystemSettingsDAO.getValue(SystemSettingsDAO.ALARM_EXPORT_VIRTUAL));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_USERNAME,
+				SystemSettingsDAO.getValue(SystemSettingsDAO.ALARM_EXPORT_USERNAME));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_PASSWORD,
+				SystemSettingsDAO.getValue(SystemSettingsDAO.ALARM_EXPORT_PASSWORD));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_EX_NAME,
+				SystemSettingsDAO.getValue(SystemSettingsDAO.ALARM_EXPORT_EX_NAME));
+		settings.put(SystemSettingsDAO.ALARM_EXPORT_Q_NAME,
+				SystemSettingsDAO.getValue(SystemSettingsDAO.ALARM_EXPORT_Q_NAME));
+
 		// Http
 		settings.put(SystemSettingsDAO.HTTP_CLIENT_USE_PROXY, SystemSettingsDAO
 				.getBooleanValue(SystemSettingsDAO.HTTP_CLIENT_USE_PROXY));
@@ -109,6 +128,7 @@ public class SystemSettingsDwr extends BaseDwr {
 						.getIntValue(SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE));
 		settings.put(SystemSettingsDAO.REPORT_PURGE_PERIODS, SystemSettingsDAO
 				.getIntValue(SystemSettingsDAO.REPORT_PURGE_PERIODS));
+		
 		settings.put(SystemSettingsDAO.UI_PERFORMANCE, SystemSettingsDAO
 				.getIntValue(SystemSettingsDAO.UI_PERFORMANCE));
 		// settings.put(SystemSettingsDAO.GROVE_LOGGING, SystemSettingsDAO
@@ -122,6 +142,11 @@ public class SystemSettingsDwr extends BaseDwr {
 				SystemSettingsDAO
 						.getIntValue(SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIODS));
 
+		// DBH [2018-09-12]: Put in system settings the data purge cron value recovered from database
+		settings.put(
+				SystemSettingsDAO.DATA_PURGE_CRON, SystemSettingsDAO
+					.getValue(SystemSettingsDAO.DATA_PURGE_CRON));
+				
 		// System
 		// settings.put(
 		// SystemSettingsDAO.NEW_VERSION_NOTIFICATION_LEVEL,
@@ -267,6 +292,42 @@ public class SystemSettingsDwr extends BaseDwr {
 	}
 
 	@MethodFilter
+	public void saveAlarmExportSettings(int aeType, String aeHost, int aePort,
+										String aeVirtual, String aeUsername, String aePassword,
+										String aeExName, String aeQueueName) {
+		Permissions.ensureAdmin();
+		SystemSettingsDAO systemSettingsDAO = new SystemSettingsDAO();
+		systemSettingsDAO.setIntValue(SystemSettingsDAO.ALARM_EXPORT_TYPE, aeType);
+		systemSettingsDAO.setValue(SystemSettingsDAO.ALARM_EXPORT_HOST, aeHost);
+		systemSettingsDAO.setIntValue(SystemSettingsDAO.ALARM_EXPORT_PORT, aePort);
+		systemSettingsDAO.setValue(SystemSettingsDAO.ALARM_EXPORT_VIRTUAL, aeVirtual);
+		systemSettingsDAO.setValue(SystemSettingsDAO.ALARM_EXPORT_USERNAME, aeUsername);
+		systemSettingsDAO.setValue(SystemSettingsDAO.ALARM_EXPORT_PASSWORD, aePassword);
+		systemSettingsDAO.setValue(SystemSettingsDAO.ALARM_EXPORT_EX_NAME, aeExName);
+		systemSettingsDAO.setValue(SystemSettingsDAO.ALARM_EXPORT_Q_NAME, aeQueueName);
+
+	}
+
+	@MethodFilter
+	public String testExportConnection(int aeType, String aeHost, int aePort,
+									 String aeVirtual, String aeUsername, String aePassword,
+									 String aeExName, String aeQueueName) {
+
+		boolean connected;
+		saveAlarmExportSettings(aeType, aeHost, aePort, aeVirtual, aeUsername, aePassword, aeExName, aeQueueName);
+		RabbitMqExporter rabbitExporterTest = new RabbitMqExporter();
+		rabbitExporterTest.initialize();
+
+		connected = rabbitExporterTest.isConnected();
+
+		if(connected){
+			rabbitExporterTest.terminate();
+		}
+
+		return connected ? "Connected" : "Disconnected";
+	}
+
+	@MethodFilter
 	public void saveHttpSettings(boolean useProxy, String host, int port,
 			String username, String password) {
 		Permissions.ensureAdmin();
@@ -286,8 +347,9 @@ public class SystemSettingsDwr extends BaseDwr {
 	@MethodFilter
 	public void saveMiscSettings(int eventPurgePeriodType,
 			int eventPurgePeriods, int reportPurgePeriodType,
-			int reportPurgePeriods, int uiPerformance, boolean groveLogging,
-			int futureDateLimitPeriodType, int futureDateLimitPeriods) {
+			int reportPurgePeriods, int uiPerformance, 
+			boolean groveLogging,int futureDateLimitPeriodType, 
+			int futureDateLimitPeriods, String dataPurgeCron) {
 		Permissions.ensureAdmin();
 		SystemSettingsDAO SystemSettingsDAO = new SystemSettingsDAO();
 		SystemSettingsDAO
@@ -299,7 +361,7 @@ public class SystemSettingsDwr extends BaseDwr {
 				SystemSettingsDAO.REPORT_PURGE_PERIOD_TYPE,
 				reportPurgePeriodType);
 		SystemSettingsDAO.setIntValue(SystemSettingsDAO.REPORT_PURGE_PERIODS,
-				reportPurgePeriods);
+				reportPurgePeriods);		
 		SystemSettingsDAO.setIntValue(SystemSettingsDAO.UI_PERFORMANCE,
 				uiPerformance);
 		SystemSettingsDAO.setBooleanValue(SystemSettingsDAO.GROVE_LOGGING,
@@ -310,6 +372,8 @@ public class SystemSettingsDwr extends BaseDwr {
 		SystemSettingsDAO.setIntValue(
 				SystemSettingsDAO.FUTURE_DATE_LIMIT_PERIODS,
 				futureDateLimitPeriods);
+		//DBH [2018-09-12]: Save data purge CRON time into database
+		SystemSettingsDAO.setValue(SystemSettingsDAO.DATA_PURGE_CRON, dataPurgeCron);
 	}
 
 	@MethodFilter
@@ -398,6 +462,20 @@ public class SystemSettingsDwr extends BaseDwr {
 		Permissions.ensureAdmin();
 		DataPurge dataPurge = new DataPurge();
 		dataPurge.execute(System.currentTimeMillis());
+	}
+
+	@MethodFilter
+	public void purgeEvents() {
+		Permissions.ensureAdmin();
+		DataPurge dataPurge = new DataPurge();
+		dataPurge.eventPurge(System.currentTimeMillis());
+	}
+
+	@MethodFilter
+	public void purgeReports() {
+		Permissions.ensureAdmin();
+		DataPurge dataPurge = new DataPurge();
+		dataPurge.reportPurge(System.currentTimeMillis());
 	}
 
 	@MethodFilter
